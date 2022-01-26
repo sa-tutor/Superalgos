@@ -33,23 +33,56 @@ exports.newOpenStorageUtilitiesGithubStorage = function () {
             const buff = new Buffer.from(fileContent, 'utf-8');
             const content = buff.toString('base64');
 
-            await octokit.repos.createOrUpdateFileContents({
-                owner: owner,
-                repo: repo,
-                path: completePath,
-                message: message,
-                content: content,
-                branch: branch
-            })
-                .then(githubSaysOK)
-                .catch(githubError)
+            try {
+                const { data: { sha } } = await octokit.request('GET /repos/{owner}/{repo}/contents/{file_path}', {
+                    owner: owner,
+                    repo: repo,
+                    file_path: completePath
+                });
+                if (sha) {
+                    await octokit.repos.createOrUpdateFileContents({
+                        owner: owner,
+                        repo: repo,
+                        path: completePath,
+                        message: message,
+                        content: content,
+                        branch: branch,
+                        sha: sha
+                    })
+                        .then(githubSaysOK)
+                        .catch(githubError)
+                } else {
+                    createNewFile()
+                }
+
+            } catch (err) {
+                if (err.status === 404) {
+                    createNewFile()
+                } else {
+                    console.log('[ERROR] File could not be saved at Github.com. -> err.stack = ' + err.stack)
+                    reject(err)
+                }
+            }
+
+            async function createNewFile() {
+                await octokit.repos.createOrUpdateFileContents({
+                    owner: owner,
+                    repo: repo,
+                    path: completePath,
+                    message: message,
+                    content: content,
+                    branch: branch,
+                })
+                    .then(githubSaysOK)
+                    .catch(githubError)
+            }
 
             function githubSaysOK() {
                 resolve()
             }
 
             function githubError(err) {
-                console.log('[ERROR] Github Storage -> saveFile -> err = ' + err)
+                console.log('[ERROR] Github Storage -> saveFile -> err.stack = ' + err.stack)
                 reject()
             }
         }

@@ -118,7 +118,17 @@ function newCircularMenuItem() {
         iconPhysics()
 
         if (thisObject.icon === undefined) {
-            console.log('[ERROR] newCircularMenuItem -> initialize -> err = Icon not found, Action: "' + thisObject.action + '", relatedUiObject: "' + thisObject.relatedUiObject + '", label: "' + thisObject.label + '"')
+            console.log(
+                '[ERROR] newCircularMenuItem -> initialize -> err = Icon not found, Action: "' +
+                thisObject.action +
+                '", relatedUiObject: "' +
+                thisObject.relatedUiObject +
+                '", label: "' +
+                thisObject.label +
+                '"'
+            )
+            console.log(thisObject.payload.node)
+            console.log(thisObject)
         }
 
         selfMouseOverEventSubscriptionId = thisObject.container.eventHandler.listenToEvent('onMouseOver', onMouseOver)
@@ -386,15 +396,19 @@ function newCircularMenuItem() {
             UI.projects.foundations.spaces.cockpitSpace.setStatus(label, 4, UI.projects.foundations.spaces.cockpitSpace.statusTypes.ALL_GOOD)
         }
 
-        onMouseClick()
+        onMouseClick(event, true)
     }
 
-    function onMouseClick() {
+    function onMouseClick(event, isInternal) {
         if (thisObject.isEnabled === false) { return }
+
+        if (isInternal === undefined) {
+            isInternal = false
+        }
 
         if (thisObject.askConfirmation !== true) { /* No confirmation is needed */
             if (temporaryStatus === STATUS_NO_ACTION_TAKEN_YET || temporaryStatus === STATUS_PRIMARY_WORK_DONE) {
-                executeAction()
+                executeAction(isInternal)
             } // Any click out of those states is ignored
         } else {
             /* Confirmation is needed */
@@ -406,7 +420,7 @@ function newCircularMenuItem() {
             }
             /* A Click during confirmation executes the pre-defined action. */
             if (temporaryStatus === STATUS_WAITING_CONFIRMATION || temporaryStatus === STATUS_PRIMARY_WORK_DONE) {
-                executeAction()
+                executeAction(isInternal)
                 if (thisObject.workDoneLabel !== undefined) {
                     setStatus(thisObject.workDoneLabel, UI_COLOR.PATINATED_TURQUOISE, 5, STATUS_SECONDARY_WORK_DONE)
                 } else {
@@ -416,10 +430,13 @@ function newCircularMenuItem() {
             }
         }
 
-        function executeAction() {
+        function executeAction(isInternal) {
             if (thisObject.action === "Open Menu") {
                 thisObject.toggleMenu()
                 return
+            }
+            if (isInternal === undefined) {
+                isInternal = false
             }
             if (temporaryStatus === STATUS_NO_ACTION_TAKEN_YET || temporaryStatus === STATUS_WAITING_CONFIRMATION) {
                 /* We need to execute the main Action */
@@ -436,6 +453,7 @@ function newCircularMenuItem() {
 
                 thisObject.actionFunction(
                     {
+                        isInternal: isInternal,
                         node: thisObject.payload.node,
                         name: thisObject.action,
                         label: thisObject.label,
@@ -454,7 +472,16 @@ function newCircularMenuItem() {
                 }
 
                 /* Execute the action and wait for callbacks to update our status. */
-                thisObject.actionFunction({ node: thisObject.payload.node, name: thisObject.secondaryAction, project: thisObject.actionProject, relatedNodeType: thisObject.relatedUiObject, callBackFunction: onSecondaryCallBack })
+                thisObject.actionFunction(
+                    {
+                        isInternal: isInternal,
+                        node: thisObject.payload.node,
+                        name: thisObject.secondaryAction,
+                        project: thisObject.actionProject,
+                        relatedNodeType: thisObject.relatedUiObject,
+                        callBackFunction: onSecondaryCallBack
+                    }
+                )
                 return
             }
 
@@ -525,7 +552,7 @@ function newCircularMenuItem() {
             for (let i = 0; i < thisObject.circularMenu.menuItems.length; i++) {
                 if (thisObject.circularMenu.menuItems[i].menu !== undefined) {
                     if (thisObject.menu.container.id !== thisObject.circularMenu.menuItems[i].menu.container.id)
-                    thisObject.circularMenu.menuItems[i].menu.setMenuOpenState(false)
+                        thisObject.circularMenu.menuItems[i].menu.setMenuOpenState(false)
                 }
             }
         }
